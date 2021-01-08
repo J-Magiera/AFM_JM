@@ -1,5 +1,5 @@
 
-void (*CLI[])(void) = {&measure, &calibrate, &singleMeasure};
+void (*CLI[])(void) = {&measure, &calibrate, &setParameters};
 
 const int dirPin_x = 6;
 const int stepPin_x = 7;
@@ -15,11 +15,16 @@ const int x1_end = 38;
 const int y2_end = 36;
 const int y1_end = 34;
 
-int xSteps = 42;
-int ySteps = 42;
 int xPos = 0;
 int yPos = 0;
-int j = 10;
+int xSize = 0;
+int ySize = 0;
+
+int data[4] = {};
+
+
+const char packageLeft = '<';
+const char packageRight = '>';
 
 
  
@@ -54,8 +59,93 @@ void loop()
  }
  
 }
+void d2()
+{
+  gotoXY(0,0);
+}
+void setParameters()
+{
+  int d = 0;
 
+  for(int i = 0; i < 4; i++){
+  while(!Serial.available());
+  while(Serial.available())
+  {
+    d = processData();
+  }
+  data[i] = d;
+  }
 
+  gotoXY(data[0], data[1]);
+  setField(data[2], data[3]);
+  
+}
+
+int processData()
+{
+  static int receivedNumber = 0;
+  byte  c = Serial.read();
+    
+  switch(c)
+  {
+    case '>':
+      break;
+
+    case '<':
+      receivedNumber = 0;
+      break;
+     
+    case '0' ... '9': 
+      receivedNumber *= 10;
+      receivedNumber += c - '0';
+      break;
+
+  }
+
+  return receivedNumber;
+}
+
+void setField(int x, int y)
+{
+  int x1 = xPos + x;
+  if(xSize >= x1) xSize = x1;
+  int y1 = yPos + y;
+  if(ySize >= y1) ySize = y1;
+
+}
+
+void gotoXY(int x, int y)
+{
+  if(x >= xPos)
+  {
+    for(; xPos < x; xPos++)
+    {
+      stepX(0);
+    }
+  }
+  else
+  {
+    for(; xPos > x; xPos--)
+    {
+      stepX(1);
+    }
+  }
+
+  if(y >= yPos)
+  {
+    for(; yPos < y; yPos++)
+    {
+      stepY(1);
+    }
+  }
+  else
+  {
+    for(; yPos > y; yPos--)
+    {
+      stepY(0); 
+    }
+  }
+}
  
 void rotateHalfZ()
 {
@@ -102,7 +192,6 @@ void Read(int x, int y)
       }      
     }
   
-   
     Serial.print(' ');
     Serial.print(x);
     Serial.print(' ');
@@ -112,28 +201,36 @@ void Read(int x, int y)
     Serial.print(' ');
     Serial.print("\n");
  
-   rotateHalfZ();
+    rotateHalfZ();
 }
 
 void measure()
 {
   bool d = 0;
-  for(int x = 0; x < 50; x++)
+  for(; xPos < xSize; xPos++)
   {
     d = !d;
-    for(int y = 0; y < yPos; y++)
+    if(0 == d)
     {
-      if(d)
+      for(; yPos >= 0; yPos--)
       {
-        Read(x, y);
+        
+        Read(xPos, yPos);
+        stepY(d);    
+        while(!(Serial.read() == '6')); 
       }
-      else
+      yPos++;
+    }
+    else if (1 == d)
+    {
+      
+      for(; yPos < ySize; yPos++)
       {
-        Read(x, yPos - 1 - y);
+        Read(xPos,  yPos);
+        stepY(d);
+        while(!(Serial.read() == '6'));
       }
-      delay(40);
-      while(!(Serial.read() == '6'));
-      stepY(d);
+      yPos--;
     }
     stepX(0);
   }
@@ -148,34 +245,28 @@ void calibrate()
 
 void calibrate_x()
 {
-  xPos = 0;
+  xSize = 0;
   while(!digitalRead(x1_end))
   {
    stepX(0); 
   }
   while(!digitalRead(x2_end))
   {
-    xPos++;
+    xSize++;
     stepX(1);
   }
 }
 
 void calibrate_y()
 {
-  yPos = 0;
+  ySize = 0;
   while(!digitalRead(y2_end))
   {
    stepY(1); 
   }
   while(!digitalRead(y1_end))
   {
-    yPos++;
+    ySize++;
     stepY(0);
   }
-}
-
-void singleMeasure()
-{
-  j++;
-  Read(j, j+1);
 }
