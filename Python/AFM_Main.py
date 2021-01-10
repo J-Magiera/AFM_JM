@@ -1,5 +1,6 @@
 import sys
 import serial
+import csv
 from PyQt5.QtGui import QIcon
 
 from PyQt5.QtWidgets import (
@@ -13,8 +14,6 @@ from PyQt5.QtWidgets import (
 from PyQt5 import QtWidgets, QtCore
 import AFM_Dialog, AFM_Graph
 
-
-# Subclass QMainWindow to customise your application's main window
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, *args, **kwargs):
@@ -34,13 +33,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.y = []
         self.data_stream = []
 
-        self.sp = QSlider()
-        self.sp.setMaximum(92)
-        self.sp.setMinimum(0)
-        self.sp.setSingleStep(1)
-
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(50)
+        self.timer.setInterval(5)
         self.timer.timeout.connect(self.readArd)
 
         self.button_graphX = QtWidgets.QPushButton(
@@ -63,7 +57,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.xLabel = QLabel("X position:")
         self.xText = QtWidgets.QLineEdit(text = '0', enabled = True)
         self.xText.setFixedSize(30, 25)
-        self.yLabel = QLabel("X position:")
+        self.yLabel = QLabel("Y position:")
         self.yText = QtWidgets.QLineEdit(text = '0',  enabled = True)
         self.yText.setFixedSize(30, 25)
         self.x1Label = QLabel("X field:")
@@ -85,15 +79,11 @@ class MainWindow(QtWidgets.QMainWindow):
             text="Calibrate",
             enabled=False,
             clicked=lambda: self.onChar(1)
-
-
         )
         
         self.button_R = QtWidgets.QPushButton(
             text="Show",
-            #enabled = False,
             clicked=self.updatePlotData
-            # checkable=True,
         )
         self.button_pause = QtWidgets.QPushButton(
             text="Pause",
@@ -140,8 +130,6 @@ class MainWindow(QtWidgets.QMainWindow):
         Hlayout.addWidget(self.button_save)
         Hlayout.addWidget(self.button_load)
         Hlayout.addWidget(self.button_connect)
-
-
         #VLaout
         Vlayout.addLayout(Hlayout)
 
@@ -172,7 +160,6 @@ class MainWindow(QtWidgets.QMainWindow):
         widget.setLayout(Vlayout)
         self.setCentralWidget(widget)
 
-
     def readArd(self):
         while self.ser.read_until():
             self.data_stream = self.ser.readline()
@@ -180,7 +167,8 @@ class MainWindow(QtWidgets.QMainWindow):
             print(self.data_stream)
             if self.data_stream != b'':
                 self.operate()
-            
+            else:
+                self.timer.stop()
 
     def operate(self):
         self.data_stream = self.data_stream.decode()
@@ -190,16 +178,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.x.append(self.data_stream[0])
         self.y.append(self.data_stream[1])
         self.z.append(self.data_stream[2])
-        d = int(self.x[-1])*100/92
-        self.prgbar.setValue(d)
-       
-     
+        progress = int(self.x[-1])*100/96
+        self.prgbar.setValue(progress)
 
     def onRead(self):
         self.ser.flushInput()
         self.ser.write(b'0')
         self.timer.start()
         self.button_pause.setEnabled(True)
+        self.button_setParameters.setEnabled(False)
+        self.xText.setEnabled(False)
+        self.yText.setEnabled(False)
+        self.x1Text.setEnabled(False)
+        self.y1Text.setEnabled(False)
 
     def updatePlotData(self):
         x = []
@@ -218,21 +209,35 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ser.write(bytes(str(c), encoding="ascii"))
 
     def saveMeasurement(self):
-        dlg = AFM_Dialog.saveDialog(self)
-        dlg.x1 = self.x
-        dlg.y1 = self.y
-        dlg.z1 = self.z
+        dlg_data = [self.x, self.y, self.z]
+        dlg = AFM_Dialog.FileDialog(self)
         dlg.exec_()
-    
+        filename = (dlg.e4.text() +'.csv')
+        try:
+            file = open(filename, 'w', newline='')
+            writer = csv.writer(file)
+            for row in dlg_data:
+                writer.writerow(row)
+        except:
+            print("Error #0003")
+
+
     def loadMeasurement(self):
-        dlg = AFM_Dialog.loadDialog(self)
+        dlg_data = []
+        dlg = AFM_Dialog.FileDialog(self)
         dlg.exec_()
-        self.x = dlg.x1
-        self.y = dlg.y1
-        self.z = dlg.z1
-        print(self.x)
-        print(self.y)
-        print(self.z)
+        filename = (dlg.e4.text() + '.csv')
+        try:
+            file = open(filename, 'r', newline='')
+            reader = csv.reader(file)
+            for  row in reader:
+                dlg_data.append(row)
+        except:
+            print("Error #0004")
+
+        self.x = dlg_data[0]
+        self.y = dlg_data[1]
+        self.z = dlg_data[2]
         
     def connectUART(self, s):
         if s and not (self.ser.isOpen()):
@@ -252,19 +257,16 @@ class MainWindow(QtWidgets.QMainWindow):
             except:
                 self.button_connect.setChecked(True)
                 print("Error #0002")
-                    
 
     def enableButtons(self):
         self.button_calibrate.setEnabled(True)
         self.button_read.setEnabled(True)
         self.button_setParameters.setEnabled(True)
 
-
     def disableButtons(self):
         self.button_calibrate.setEnabled(False)
         self.button_read.setEnabled(False)
         self.button_pause.setEnabled(False)
-        self.button_setParameters.setEnabled(False)
 
     def setAngle(self, el, az):
         self.graphWidget.axes.view_init(elev=el,azim=az)
@@ -278,26 +280,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def setParams(self):
         self.ser.write(b'2')
-        x =bytes(str(self.xText.text()), encoding= 'ascii')
-        y = bytes(str(self.yText.text()), encoding='ascii')
-        x1 = bytes(str(self.x1Text.text()), encoding='ascii')
-        y1 = bytes(str(self.y1Text.text()), encoding='ascii')
+
+        dataToSend = [bytes(str(self.xText.text()), encoding= 'ascii'),bytes(str(self.yText.text()), encoding='ascii'),
+                      bytes(str(self.x1Text.text()), encoding='ascii'),bytes(str(self.y1Text.text()), encoding='ascii') ]
+
         self.ser.write(b'<')
-        self.ser.write(x)
-        self.ser.write(b',')
-        self.ser.write(y)
-        self.ser.write(b',')
-        self.ser.write(x1)
-        self.ser.write(b',')
-        self.ser.write(y1)
-        self.ser.write(b',')
+        for data in dataToSend:
+            print(data)
+            self.ser.write(data)
+            self.ser.write(b',')
         self.ser.write(b'>')
 
-        self.button_setParameters.setEnabled(False)
-        self.xText.setEnabled(False)
-        self.yText.setEnabled(False)
-        self.x1Text.setEnabled(False)
-        self.y1Text.setEnabled(False)
+
 
 app = QApplication(sys.argv)
 app.setStyle('Breeze')
