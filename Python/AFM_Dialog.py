@@ -24,12 +24,12 @@ class saveDialog(QtWidgets.QDialog):
 
     def saveAs(self, text):
         try:
-            file = open(text+'.csv','w', newline='')
+            file = open(text+'.csv','w', newline='', quoting=csv.QUOTE_NONE)
             writer = csv.writer(file)
             print(self.x1)
-            writer.writerow([self.dat[0]])
-            writer.writerow([self.dat[1]])
-            writer.writerow([self.dat[2]])
+            writer.writerow([self.x1])
+            writer.writerow([self.y1])
+            writer.writerow([self.z1])
             #This function will save all gathered data into .csv file with name from textbox
         except:
             print("Error #0003")
@@ -59,10 +59,13 @@ class loadDialog(QtWidgets.QDialog):
     def readFile(self, text):
         try:
             file = open(text+'.csv','r')
+            data = []
             reader = csv.reader(file)
-            self.x1 = file.readline()
-            self.y1 = file.readline()
-            self.z1 = file.readline()
-            print(self.x1)
+            for i, row in reader:
+                data[i] = row
+            self.x1 = data[0]
+            self.y1 = data[1]
+            self.z1 = data[2]
+
         except:
             print("Error #0004")                
