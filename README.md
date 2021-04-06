@@ -12,8 +12,6 @@
   <p align="center">
     Software for educational model of atomic forces microscope
     <br />
-    <a href="https://github.com/J-Magiera/Maze-Generator"><strong>Explore the docs »</strong></a>
-    <br />
     <br />
   </p>
 </p>
@@ -83,7 +81,7 @@ Python IDE like PyCharm (or any other)
 Python 3.6 or newer
    ```sh
    https://www.python.org/
-   ```sh
+   ```
 
 
 ### Installation
