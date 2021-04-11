@@ -18,8 +18,8 @@
 
 
 
-<!-- TABLE OF CONTENTS -->
-<details open="open">
+ <!-- TABLE OF CONTENTS -->
+<details>
   <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
   <ol>
     <li>
@@ -49,9 +49,23 @@
 Graphical user interface and arduino ATMega 2560 framework for educational model of atomic forces microscope.
 Goal of this project was to interface microcontroller from Arduino family, with a PC class device, such as Raspberry Pi.
 It uses methods similar to 3D printing to manipulate UUT on microscope's tray, a laser and photoresistor stripe to get 3D image of an object.
+
 Build by [Jan Magiera](https://github.com/J-Magiera).
 
+## Project images
 
+<details>
+  <summary>Images of GUI, scanned object and scan results</summary>
+     <h3 align="left">Application's Graphical User Interface</br>
+     <img src="images/GUI.png" alt="Scanned object" width="400" height="400"></br></br>
+      Object placed on microscope's tray</br>
+     <img src="images/scan_obj.png" alt="Scanned object" width="400" height="400"></br></br>
+      Scanned object viewed in application from top</br>
+     <img src="images/scan_top.png" alt="Scanned object top view" width="400" height="400"></br></br>
+      Scanned object viewed in application from top-side angle</br>
+     <img src="images/scan_side.png" alt="Scanned object side view" width="400" height="400"></br></br>
+     </h3>
+</details>
 
 ### Built With
 
